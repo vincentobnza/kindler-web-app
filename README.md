@@ -63,8 +63,7 @@ tests/         unit / component / integration (mirrors src/)
 ```
 
 Each feature owns its `components`, `hooks`, `services`, `queries`, `stores`,
-`pages`, `constants` and `types`. See **[AGENTS.md](./AGENTS.md)** for the full
-engineering guide and conventions.
+`pages`, `constants` and `types`.
 
 ## Features
 
