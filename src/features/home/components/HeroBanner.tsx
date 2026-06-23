@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { motion, useReducedMotion, type Variants } from "motion/react"
 import { RiSearchLine } from "react-icons/ri"
+import { RxRocket } from "react-icons/rx"
 import { useNavigate } from "react-router-dom"
 
 import { buildPath } from "@/constants/routes"
@@ -69,8 +70,9 @@ export function HeroBanner() {
       <div className="mx-auto max-w-2xl space-y-5 text-center">
         <motion.span
           variants={item}
-          className="inline-flex items-center rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground"
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground"
         >
+          <RxRocket className="size-3" />
           Powered by the Open Library
         </motion.span>
 

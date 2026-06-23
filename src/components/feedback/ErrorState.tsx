@@ -1,4 +1,4 @@
-import { RiErrorWarningFill, RiRefreshLine } from "react-icons/ri"
+import { RiRefreshLine } from "react-icons/ri"
 
 import { UI_LABELS } from "@/constants/ui-labels"
 import { ApiError } from "@/lib/http/api-error"
@@ -41,10 +41,16 @@ export function ErrorState({
         className
       )}
     >
-      <span className="grid size-12 place-items-center rounded-full bg-destructive/10 text-destructive">
-        <RiErrorWarningFill className="size-6" />
-      </span>
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <img
+        src="/error-state-image.png"
+        alt=""
+        aria-hidden
+        loading="lazy"
+        className="size-28 object-contain"
+      />
+      <h2 className="text-xl font-semibold text-foreground sm:text-2xl">
+        {title}
+      </h2>
       <p className="-mt-1 max-w-sm text-sm text-muted-foreground">{message}</p>
       {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry} className="mt-2">

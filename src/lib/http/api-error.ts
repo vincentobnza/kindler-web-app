@@ -24,4 +24,9 @@ export class ApiError extends Error {
   get isNotFound(): boolean {
     return this.status === 404
   }
+
+  /** True when the server rejected the request as unprocessable (422). */
+  get isUnprocessable(): boolean {
+    return this.status === 422
+  }
 }

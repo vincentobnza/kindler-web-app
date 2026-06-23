@@ -14,7 +14,7 @@ export function Brand({ className }: { className?: string }) {
         className
       )}
     >
-      <span className="font-heading text-lg font-semibold tracking-tight italic sm:text-xl md:text-2xl lg:text-3xl">
+      <span className="font-heading text-2xl font-semibold tracking-tight italic lg:text-3xl">
         {SITE.name}.
       </span>
     </Link>

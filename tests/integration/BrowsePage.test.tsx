@@ -1,6 +1,14 @@
 import { screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ApiError } from "@/lib/http/api-error"
+import { BrowsePage } from "@/features/books/pages/BrowsePage"
+import { bookService } from "@/features/books/services/book-service"
+import { useLibraryStore } from "@/features/library/stores/saved-books-store"
+
+import { BOOKS } from "../fixtures/books"
+import { renderWithProviders } from "../utils/render"
+
 // Mock the service boundary so the test exercises page → hook → query → cache
 // integration without hitting the network.
 vi.mock("@/features/books/services/book-service", () => ({
@@ -10,12 +18,6 @@ vi.mock("@/features/books/services/book-service", () => ({
     listBySubject: vi.fn(),
   },
 }))
-
-import { BrowsePage } from "@/features/books/pages/BrowsePage"
-import { bookService } from "@/features/books/services/book-service"
-import { useLibraryStore } from "@/features/library/stores/saved-books-store"
-import { BOOKS } from "../fixtures/books"
-import { renderWithProviders } from "../utils/render"
 
 function renderAt(initialEntry: string) {
   renderWithProviders(<BrowsePage />, { initialEntries: [initialEntry] })
@@ -53,5 +55,27 @@ describe("BrowsePage (integration)", () => {
     renderAt("/browse?q=zzzzz")
 
     expect(await screen.findByText(/no books matched/i)).toBeInTheDocument()
+  })
+
+  it("treats an unprocessable query (422) as no results, not an error", async () => {
+    vi.mocked(bookService.search).mockRejectedValue(
+      new ApiError("Request failed with status 422", 422)
+    )
+
+    renderAt("/browse?q=hh")
+
+    expect(await screen.findByText(/no books matched/i)).toBeInTheDocument()
+    expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument()
+  })
+
+  it("shows an error state for genuine failures", async () => {
+    vi.mocked(bookService.search).mockRejectedValue(
+      new ApiError("Request failed with status 500", 500)
+    )
+
+    renderAt("/browse?q=dune")
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument()
+    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
   })
 })

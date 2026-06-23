@@ -7,6 +7,7 @@ import {
 } from "@/constants/app-config"
 import { buildPath } from "@/constants/routes"
 import { UI_LABELS } from "@/constants/ui-labels"
+import { ApiError } from "@/lib/http/api-error"
 import { PageHeader } from "@/components/common/PageHeader"
 import { EmptyState } from "@/components/feedback/EmptyState"
 import { BookStackArt } from "@/components/feedback/EmptyStateArt"
@@ -27,6 +28,12 @@ export function BrowsePage() {
   const books = query.data?.books ?? []
   const hasPrev = page > 1
   const hasNext = page * SEARCH_PAGE_SIZE < total
+
+  // A 422 means the API couldn't process this query — for a search box that's
+  // just "no results", not a failure to surface with a scary error + retry.
+  const isUnprocessable =
+    query.error instanceof ApiError && query.error.isUnprocessable
+  const showError = query.isError && !isUnprocessable
 
   return (
     <div className="space-y-6">
@@ -49,7 +56,7 @@ export function BrowsePage() {
           title="Find your next read"
           description={UI_LABELS.feedback.searchPrompt}
         />
-      ) : query.isError ? (
+      ) : showError ? (
         <ErrorState error={query.error} onRetry={() => query.refetch()} />
       ) : query.isPending ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

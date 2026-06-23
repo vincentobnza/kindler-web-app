@@ -32,7 +32,7 @@ export function BookCard({ book }: { book: BookCardItem }) {
   return (
     <Link
       to={buildPath.bookDetail(book.id)}
-      className="group/card flex flex-col gap-3 transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="group/card flex flex-col gap-3 transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       <div className="relative">
         <BookCover
