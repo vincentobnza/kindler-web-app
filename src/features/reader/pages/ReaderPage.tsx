@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useWindowVirtualizer } from "@tanstack/react-virtual"
 import { RiArrowLeftLine, RiExternalLinkLine } from "react-icons/ri"
 import { Link, useParams } from "react-router-dom"
 
@@ -22,13 +23,19 @@ import { useBookText } from "../hooks/useBookText"
 import { paginate } from "../lib/paginate"
 import { useReadingProgressStore } from "../stores/reading-progress-store"
 
+/** Estimated section height (px) before measurement; the virtualizer corrects it. */
+const SECTION_ESTIMATE = 800
+
+/** Top inset for `scrollToIndex` so a resumed section clears the sticky bars. */
+const STICKY_OFFSET = 120
+
 export function ReaderPage() {
   const { bookId = "" } = useParams()
   const book = useBook(bookId)
   const text = useBookText(bookId)
 
   const [fontScale, setFontScale] = useState<number>(READER_FONT_SCALE.default)
-  // Captured once at mount so the saved position survives the first persist.
+  // Captured once at mount so resume survives the first persist (see below).
   const [initialSection] = useState(
     () => useReadingProgressStore.getState().pages[bookId] ?? 0
   )
@@ -40,28 +47,39 @@ export function ReaderPage() {
     : []
   const totalSections = sections.length
 
-  const sectionEls = useRef<(HTMLElement | null)[]>([])
-  const visibleRef = useRef<Set<number>>(new Set())
+  const listRef = useRef<HTMLDivElement>(null)
   const restoredRef = useRef(false)
+  // The window virtualizer needs the list's document offset to map page scroll
+  // onto item positions; measured after layout (and on resize).
+  const [scrollMargin, setScrollMargin] = useState(0)
 
   const title = book.data?.title ?? "Reading"
   const authors = book.data ? formatAuthors(book.data.authors, 3) : ""
 
-  // Track the top-most visible section (drives progress + resume position).
-  useEffect(() => {
-    if (totalSections === 0) return
-    const visible = visibleRef.current
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const index = Number((entry.target as HTMLElement).dataset.section)
-        if (entry.isIntersecting) visible.add(index)
-        else visible.delete(index)
-      }
-      if (visible.size > 0) setTopSection(Math.min(...visible))
-    })
-    const els = sectionEls.current.slice(0, totalSections).filter(Boolean)
-    els.forEach((el) => observer.observe(el as HTMLElement))
-    return () => observer.disconnect()
+  const virtualizer = useWindowVirtualizer({
+    count: totalSections,
+    estimateSize: () => SECTION_ESTIMATE,
+    overscan: 4,
+    scrollMargin,
+    scrollPaddingStart: STICKY_OFFSET,
+    // Track the top-most visible section for the progress bar + resume.
+    onChange: (instance) => {
+      const items = instance.getVirtualItems()
+      if (items.length === 0) return
+      const offset = instance.scrollOffset ?? 0
+      const top = items.find((item) => item.start + item.size > offset)
+      const index = (top ?? items[0]).index
+      setTopSection((prev) => (prev === index ? prev : index))
+    },
+  })
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (listRef.current) setScrollMargin(listRef.current.offsetTop)
+    }
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
   }, [totalSections])
 
   // Persist the top visible section so the reader resumes here next time.
@@ -71,26 +89,20 @@ export function ReaderPage() {
     useReadingProgressStore.getState().setPage(bookId, clamped)
   }, [bookId, topSection, totalSections])
 
-  // On open ("Continue reading"), glide to the saved section (once). Smooth
-  // unless the reader prefers reduced motion, in which case we jump instantly.
+  // On open ("Continue reading"), glide to the saved section (once). Uses the
+  // mount-captured index so an early onChange can't clobber the target.
   useEffect(() => {
-    if (totalSections === 0 || restoredRef.current) return
+    if (totalSections === 0 || scrollMargin === 0 || restoredRef.current) return
     restoredRef.current = true
-    const saved = useReadingProgressStore.getState().pages[bookId] ?? 0
-    if (saved <= 0) return
-    const el = sectionEls.current[Math.min(saved, totalSections - 1)]
-    if (!el) return
+    if (initialSection <= 0) return
     const prefersReduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches
-    // Defer one frame so layout is settled before the animation starts.
-    requestAnimationFrame(() => {
-      el.scrollIntoView({
-        behavior: prefersReduced ? "auto" : "smooth",
-        block: "start",
-      })
+    virtualizer.scrollToIndex(Math.min(initialSection, totalSections - 1), {
+      align: "start",
+      behavior: prefersReduced ? "auto" : "smooth",
     })
-  }, [bookId, totalSections])
+  }, [initialSection, totalSections, scrollMargin, virtualizer])
 
   const backToBook = (
     <Button asChild variant="ghost" size="sm" className="-ml-2">
@@ -158,6 +170,7 @@ export function ReaderPage() {
     totalSections > 0
       ? ((Math.min(topSection, totalSections - 1) + 1) / totalSections) * 100
       : 0
+  const virtualItems = virtualizer.getVirtualItems()
 
   return (
     <div className="space-y-6">
@@ -231,31 +244,38 @@ export function ReaderPage() {
         ) : null}
       </div>
 
-      {/* One continuous reading column on the paper background — no card. */}
+      {/* One continuous reading column on the paper background — no card.
+          Only the on-screen sections are mounted (windowed by TanStack). */}
       <article
         className="prose-reading mx-auto max-w-prose text-foreground/90"
         style={{ fontSize: `${fontScale * 1.0625}rem` }}
       >
-        {sections.map((section, index) => (
-          <section
-            key={index}
-            data-section={index}
-            ref={(el) => {
-              sectionEls.current[index] = el
-            }}
-            // Browser-level virtualization: skip rendering off-screen sections.
-            className="scroll-mt-36 [contain-intrinsic-size:auto_640px] [content-visibility:auto]"
-          >
-            {section.map((paragraph, paragraphIndex) => (
-              <p
-                key={paragraphIndex}
-                className="mb-4 text-justify [hyphens:auto]"
-              >
-                {paragraph}
-              </p>
-            ))}
-          </section>
-        ))}
+        <div
+          ref={listRef}
+          className="relative w-full"
+          style={{ height: `${virtualizer.getTotalSize()}px` }}
+        >
+          {virtualItems.map((item) => (
+            <div
+              key={item.key}
+              data-index={item.index}
+              ref={virtualizer.measureElement}
+              className="absolute top-0 left-0 w-full"
+              style={{
+                transform: `translateY(${item.start - virtualizer.options.scrollMargin}px)`,
+              }}
+            >
+              {sections[item.index].map((paragraph, paragraphIndex) => (
+                <p
+                  key={paragraphIndex}
+                  className="mb-4 text-justify [hyphens:auto]"
+                >
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
       </article>
 
       <p className="text-center text-xs text-muted-foreground">
