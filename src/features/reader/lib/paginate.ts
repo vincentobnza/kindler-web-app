@@ -1,14 +1,29 @@
 /**
- * Splits reflowed paragraphs into fixed-ish "pages" for the reader. Paragraphs
- * are never split across pages (so a sentence never breaks mid-page) unless a
- * single paragraph is itself larger than a page, in which case it is chunked on
- * word boundaries. Pure → unit-testable, and deterministic so a reader's saved
- * page index stays valid across reloads.
+ * Splits a book's blocks into fixed-ish "sections" for the reader. A section is
+ * just a virtualization chunk targeting roughly `charsPerSection` characters;
+ * the scroll reads as one continuous column. Blocks are never split across
+ * sections (so a heading never parts from its first line) unless a single
+ * paragraph is itself larger than a section, in which case it is chunked on word
+ * boundaries. Pure -> unit-testable, and deterministic so a reader's saved
+ * section index stays valid across reloads.
  */
 
-/** Splits one over-long paragraph into chunks no larger than `max` chars. */
-function splitLongParagraph(paragraph: string, max: number): string[] {
-  const words = paragraph.split(" ")
+import type { BookBlock } from "../types"
+
+/** Rough render "cost" of a block, used only to balance section sizes. */
+function blockWeight(block: BookBlock): number {
+  if (block.kind === "paragraph") return block.text.length
+  if (block.kind === "heading")
+    return (block.kicker?.length ?? 0) + block.title.length + 24
+  return 24 // a scene break still occupies vertical space
+}
+
+/** Splits one over-long paragraph into paragraph blocks no larger than `max`. */
+function splitLongParagraph(
+  block: BookBlock & { kind: "paragraph" },
+  max: number
+): BookBlock[] {
+  const words = block.text.split(" ")
   const chunks: string[] = []
   let buffer = ""
 
@@ -21,43 +36,51 @@ function splitLongParagraph(paragraph: string, max: number): string[] {
     }
   }
   if (buffer) chunks.push(buffer)
-  return chunks
+
+  // Only the first chunk keeps the opener treatment (flush-left + drop cap).
+  return chunks.map((text, index) => ({
+    kind: "paragraph",
+    text,
+    opensSection: index === 0 ? block.opensSection : false,
+    dropCap: index === 0 ? block.dropCap : false,
+  }))
 }
 
 /**
- * Groups paragraphs into pages, each targeting roughly `charsPerPage`
- * characters. Always returns at least one (possibly empty) page.
+ * Groups blocks into sections, each targeting roughly `charsPerSection`
+ * characters. Always returns at least one (possibly empty) section.
  */
 export function paginate(
-  paragraphs: string[],
-  charsPerPage: number
-): string[][] {
-  const pages: string[][] = []
-  let current: string[] = []
+  blocks: BookBlock[],
+  charsPerSection: number
+): BookBlock[][] {
+  const sections: BookBlock[][] = []
+  let current: BookBlock[] = []
   let length = 0
 
   const flush = () => {
     if (current.length > 0) {
-      pages.push(current)
+      sections.push(current)
       current = []
       length = 0
     }
   }
 
-  for (const paragraph of paragraphs) {
-    const chunks =
-      paragraph.length > charsPerPage
-        ? splitLongParagraph(paragraph, charsPerPage)
-        : [paragraph]
+  for (const block of blocks) {
+    const pieces =
+      block.kind === "paragraph" && block.text.length > charsPerSection
+        ? splitLongParagraph(block, charsPerSection)
+        : [block]
 
-    for (const chunk of chunks) {
-      // Break to a new page when this chunk would overflow a non-empty page.
-      if (length > 0 && length + chunk.length > charsPerPage) flush()
-      current.push(chunk)
-      length += chunk.length
+    for (const piece of pieces) {
+      const weight = blockWeight(piece)
+      // Break to a new section when this piece would overflow a non-empty one.
+      if (length > 0 && length + weight > charsPerSection) flush()
+      current.push(piece)
+      length += weight
     }
   }
   flush()
 
-  return pages.length > 0 ? pages : [[]]
+  return sections.length > 0 ? sections : [[]]
 }

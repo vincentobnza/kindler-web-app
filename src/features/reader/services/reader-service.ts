@@ -16,14 +16,14 @@
  * `Access-Control-Allow-Origin: *`, so this runs entirely in the browser.
  */
 
+import { API_ENDPOINTS } from "@/constants/api-endpoints"
 import {
   READER_MAX_TEXT_BYTES,
   READER_MAX_TEXT_CANDIDATES,
   READER_MIN_TEXT_CHARS,
 } from "@/constants/app-config"
-import { API_ENDPOINTS } from "@/constants/api-endpoints"
-import { ApiError } from "@/lib/http/api-error"
 import { apiClient } from "@/lib/http/api-client"
+import { ApiError } from "@/lib/http/api-error"
 
 import { ARCHIVE } from "../constants"
 import { cleanBookText } from "../lib/clean-text"
@@ -168,12 +168,15 @@ async function readFromItem(
   if (!file) return null
 
   const raw = await fetchText(ARCHIVE.file(ocaid, file.name), signal)
-  const paragraphs = cleanBookText(raw)
+  const blocks = cleanBookText(raw)
 
-  const length = paragraphs.reduce((total, p) => total + p.length, 0)
+  const length = blocks.reduce((total, block) => {
+    if (block.kind === "break") return total
+    return total + (block.kind === "heading" ? block.title : block.text).length
+  }, 0)
   if (length < READER_MIN_TEXT_CHARS) return null
 
-  return { paragraphs, source: describeSource(ocaid) }
+  return { blocks, source: describeSource(ocaid) }
 }
 
 export const readerService = {

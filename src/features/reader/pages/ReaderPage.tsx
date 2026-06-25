@@ -19,6 +19,7 @@ import { Seo } from "@/components/seo/Seo"
 import { Button } from "@/components/ui/button"
 import { useBook } from "@/features/books/hooks/useBook"
 
+import { ReaderBlock } from "../components/ReaderBlock"
 import { useBookText } from "../hooks/useBookText"
 import { paginate } from "../lib/paginate"
 import { useReadingProgressStore } from "../stores/reading-progress-store"
@@ -43,7 +44,7 @@ export function ReaderPage() {
 
   // The whole book is chunked into sections; pure + memoized by the compiler.
   const sections = text.data
-    ? paginate(text.data.paragraphs, READER_CHARS_PER_SECTION)
+    ? paginate(text.data.blocks, READER_CHARS_PER_SECTION)
     : []
   const totalSections = sections.length
 
@@ -265,13 +266,8 @@ export function ReaderPage() {
                 transform: `translateY(${item.start - virtualizer.options.scrollMargin}px)`,
               }}
             >
-              {sections[item.index].map((paragraph, paragraphIndex) => (
-                <p
-                  key={paragraphIndex}
-                  className="mb-4 text-justify [hyphens:auto]"
-                >
-                  {paragraph}
-                </p>
+              {sections[item.index].map((block, blockIndex) => (
+                <ReaderBlock key={blockIndex} block={block} />
               ))}
             </div>
           ))}
