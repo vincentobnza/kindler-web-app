@@ -99,6 +99,15 @@ export function createAppRoutes(queryClient: QueryClient): RouteObject[] {
           },
         },
         {
+          path: ROUTE_PATHS.bookRead,
+          lazy: async () => {
+            const { ReaderPage } = await import(
+              "@/features/reader/pages/ReaderPage"
+            )
+            return { Component: ReaderPage }
+          },
+        },
+        {
           path: ROUTE_PATHS.library,
           lazy: async () => {
             const { LibraryPage } = await import(

@@ -31,7 +31,7 @@ export function SaveButton({
     return (
       <Button
         type="button"
-        variant={isSaved ? "secondary" : "default"}
+        variant={isSaved ? "secondary" : "outline"}
         aria-pressed={isSaved}
         onClick={() => toggle(book)}
         className={className}
@@ -45,7 +45,7 @@ export function SaveButton({
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="outline"
       size="icon-sm"
       aria-pressed={isSaved}
       aria-label={label}

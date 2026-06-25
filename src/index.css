@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/lexend";
 @import "@fontsource-variable/eb-garamond";
+@import "@fontsource-variable/literata";
 
 /* ---------------------------------------------------------------------------
  * Design tokens → Tailwind theme bridge.
@@ -18,8 +19,10 @@
   /* Headings — EB Garamond, a classic, elegant book serif. */
   --font-heading:
     "EB Garamond Variable", ui-serif, Georgia, "Times New Roman", serif;
-  /* Long-form reading surfaces (book descriptions) use the serif too. */
-  --font-reading: "EB Garamond Variable", ui-serif, Georgia, serif;
+  /* Long-form reading surfaces use Literata — a serif designed by Google
+     specifically for on-screen book reading (the Play Books default). */
+  --font-reading:
+    "Literata Variable", "EB Garamond Variable", ui-serif, Georgia, serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -9,5 +9,6 @@ export const QUERY_KEYS = {
   bookSearch: (query: string, page: number) =>
     ["books", "search", query, page] as const,
   book: (bookId: string) => ["books", "detail", bookId] as const,
+  bookText: (bookId: string) => ["books", "text", bookId] as const,
   subject: (subject: string) => ["books", "subject", subject] as const,
 } as const

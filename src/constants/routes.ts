@@ -11,6 +11,7 @@ export const ROUTE_PATHS = {
   home: "/",
   browse: "/browse",
   bookDetail: "/book/:bookId",
+  bookRead: "/book/:bookId/read",
   library: "/library",
   notFound: "*",
 } as const
@@ -20,6 +21,7 @@ export const buildPath = {
   home: (): string => "/",
   browse: (): string => "/browse",
   bookDetail: (bookId: string): string => `/book/${bookId}`,
+  bookRead: (bookId: string): string => `/book/${bookId}/read`,
   library: (): string => "/library",
 } as const
 

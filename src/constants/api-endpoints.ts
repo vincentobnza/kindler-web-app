@@ -52,6 +52,30 @@ export const API_ENDPOINTS = {
 
   work: (workId: string): string => `/works/${bareId(workId)}.json`,
 
+  /**
+   * Looks a work up by its key via the search index. Unlike the work record,
+   * the search doc carries the work's *complete* `ia` (Internet Archive id)
+   * list — including public Project Gutenberg items — plus an `ebook_access`
+   * flag, which is how the reader finds readable full text.
+   */
+  workSearch: (workId: string): string => {
+    const params = new URLSearchParams({
+      q: `key:/works/${bareId(workId)}`,
+      fields: "ia,ebook_access",
+      limit: "1",
+    })
+    return `/search.json?${params.toString()}`
+  },
+
+  /**
+   * Editions of a work — a fallback source of Internet Archive `ocaid`s when
+   * the search index has no `ia` list for the work.
+   */
+  editions: (workId: string, limit = 50): string => {
+    const params = new URLSearchParams({ limit: String(limit) })
+    return `/works/${bareId(workId)}/editions.json?${params.toString()}`
+  },
+
   author: (authorKey: string): string =>
     `/authors/${authorKey.replace(/^\/authors\//, "")}.json`,
 

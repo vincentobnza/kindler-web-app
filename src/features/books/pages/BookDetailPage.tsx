@@ -1,10 +1,10 @@
-import { Link, useParams } from "react-router-dom"
 import {
   RiArrowLeftLine,
+  RiBookOpenLine,
   RiCalendarLine,
-  RiExternalLinkLine,
   RiPriceTag3Line,
 } from "react-icons/ri"
+import { Link, useParams } from "react-router-dom"
 
 import { buildPath } from "@/constants/routes"
 import { UI_LABELS } from "@/constants/ui-labels"
@@ -15,6 +15,7 @@ import { LoadingSpinner } from "@/components/feedback/LoadingSpinner"
 import { Seo } from "@/components/seo/Seo"
 import { Button } from "@/components/ui/button"
 import { SaveButton } from "@/features/library/components/SaveButton"
+import { useReadingProgressStore } from "@/features/reader/stores/reading-progress-store"
 
 import { BookCover } from "../components/BookCover"
 import { useBook } from "../hooks/useBook"
@@ -24,6 +25,7 @@ const MAX_SUBJECTS = 12
 export function BookDetailPage() {
   const { bookId = "" } = useParams()
   const { data: book, isPending, isError, error, refetch } = useBook(bookId)
+  const startedPage = useReadingProgressStore((state) => state.pages[bookId])
 
   if (isError) return <ErrorState error={error} onRetry={() => refetch()} />
   if (isPending || !book) {
@@ -82,6 +84,14 @@ export function BookDetailPage() {
           ) : null}
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
+            <Button asChild>
+              <Link to={buildPath.bookRead(book.id)}>
+                <RiBookOpenLine />
+                {startedPage && startedPage > 0
+                  ? UI_LABELS.actions.continueReading
+                  : UI_LABELS.actions.startReading}
+              </Link>
+            </Button>
             <SaveButton
               book={{
                 id: book.id,
@@ -91,16 +101,6 @@ export function BookDetailPage() {
               }}
               withLabel
             />
-            <Button asChild variant="outline">
-              <a
-                href={book.openLibraryUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                <RiExternalLinkLine />
-                {UI_LABELS.actions.readOnline}
-              </a>
-            </Button>
           </div>
         </div>
       </header>
